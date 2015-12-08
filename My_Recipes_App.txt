@@ -1,0 +1,346 @@
+- My Recipes App -
+
+/* ==============================
+	Create Chef Table & Model
+============================== */
+	
+// Create Recipes Table
+$ rails generate migration create_recipes
+// result: db/migrate/****_create_reciipes.rb
+
+
+- add columns to 'db/migrate/****_create_reciipes.rb'
+	
+	create_table :recipes do |t|
+		t.string :name
+		t.text :summary
+		t.text :description
+		t.timestamps
+	end
+
+// create table in actual database
+$ rake db:migrate
+
+
+- Create Recipe Model in /models:
+
+	// Looks for a table in db/migrate called 'recipes'
+	class Recipe < ActiveRecord::Base
+
+	end
+
+
+// Check that it was created
+$ rails console
+
+// View all Recipes
+> Recipe.all
+
+// View table contents
+> Recipe
+
+> exit
+
+
+/* ==============================
+	Create Chef Table & Model
+============================== */
+
+// Create Chefs Table
+$ rails generate migration create_chefs
+// result: db/migrate/****_create_chefs.rb
+
+
+- add columns to 'db/migrate/****_create_reciipes.rb'
+	create_table :chefs do |t|
+		t.string :chefname
+		t.string :email
+		t.timestamps
+	end
+
+
+// create table in actual database
+$ rake db:migrate
+
+- Create Chef Model in /models:
+
+	// Looks for a table in db/migrate called 'chefs'
+	class Chef < ActiveRecord::Base
+
+	end
+
+
+// Check that it was created
+$ rails console
+
+// View all Recipes
+> Chef.all
+
+// View table contents
+> Chef
+
+> exit
+
+
+/* ========================================
+	Create Testing for Model Validations
+	-> Then Test Validations
+======================================== */
+
+- Create testing specs
+
+	ex.	- chefname must be present
+		- chefname must be more than 3 characters and less than 40 characters
+		- email must be present
+		- email must be unique (since we'll use this for logins later)
+		- email mst be valid
+
+
+- Create 'recipe_test.rb' in /test/models
+
+	require 'test_helper'
+
+	class RecipeTest < ActiveSupport::TestCase
+
+		def setup
+			@recipe = Recipe.new(name: "chicken parm", summary: "this is the best chicken parm recipe ever", description: "heat oil, add onions, add tomato sauce, add chicken, cook for 20 minuets")
+		end
+
+		test "recipe should be valid" do
+			assert @recipe.valid?
+		end
+
+		test "name should be present" do
+			@recipe.name = ""
+			assert_not @recipe.valid?
+		end
+
+		test "name length should not be too long" do
+			@recipe.name = "a" * 101
+			assert_not @recipe.valid?
+		end
+
+		test "name length should not be too short" do
+			@recipe.name = "aaaa"
+			assert_not @recipe.valid?
+		end
+
+		test "summary should be present" do
+			@recipe.summary = ""
+			assert_not @recipe.valid?
+		end
+
+		test "summary length should not be too long" do
+			@recipe.summary = "a" * 151
+			assert_not @recipe.valid?
+		end
+
+		test "summary length should not be too short" do
+			@recipe.summary = "a" * 9
+			assert_not @recipe.valid?
+		end
+
+		test "description must be present" do
+			@recipe.description = ""
+			assert_not @recipe.valid?
+		end
+
+		test "description should not be to long" do
+			@recipe.description = "a" * 501
+			assert_not @recipe.valid?
+		end
+
+		test "description should not be to short" do
+			@recipe.description = "a" * 19
+			assert_not @recipe.valid?
+		end
+
+	end
+
+
+// See if tests pass (they should because validations haven't been written in the model yet)
+$ rake test
+
+
+- Create validations in 'recipe.rb' model
+
+	class Recipe < ActiveRecord::Base
+		validates :name, presence: true, length: { minimum: 5, maximum: 100 }
+		validates :summary, presence: true, length: { minimum: 10, maximum: 150 }
+		validates :description, presence: true, length: { minimum: 20, maximum: 500 }
+	end
+
+
+- Create 'chef_test.rb' in /test/models
+
+	require "test_helper"
+
+	class ChefTest < ActiveSupport::TestCase
+
+		def setup
+			@chef = Chef.new(chefname: "john", email: "john@example.com")
+		end
+
+		test "chef should be valid" do
+			assert @chef.valid?		
+		end
+
+		test "chefname should be present" do
+			@chef.chefname = ""
+			assert_not @chef.valid?
+		end
+
+		test "chefname length should not be too long" do
+			@chef.chefname = "a" * 41
+			assert_not @chef.valid?
+		end
+
+		test "chefname length should not be too short" do
+			@chef.chefname = "aa"
+			assert_not @chef.valid?
+		end
+
+		test "email should be present" do
+			@chef.email = ""
+			assert_not @chef.valid?
+		end
+
+		test "email length should be within bounds" do
+			@chef.email = "a" * 101 + "@example.com"
+			assert_not @chef.valid?
+		end
+
+		test "email address should be unique" do
+			dup_chef = @chef.dup
+			dup_chef.email = @chef.email.upcase
+			@chef.save
+			assert_not dup_chef.valid?
+		end
+
+		test "email validation should accept valid addresses" do
+			valid_addresses = %w[user@eee.com R_TDD-DS@eee.hello.org user@example.com first.last@eee.au laura+joe@monk.cm]
+			valid_addresses.each do |va|
+				@chef.email = va
+				assert @chef.valid?, '#{va.inspect} should be valid'
+			end
+		end
+
+		test "email validation should reject invalid addresses" do
+			invalid_addresses = %w[user@example,com user_at_eee.org user.name@example. eee@u_i.com foo@ee+aar.com]
+			invalid_addresses.each do |ia|
+				@chef.email = ia
+				assert_not @chef.valid?, '#{ia.inspect} is not valid'
+			end
+		end
+
+	end
+
+
+- Create validations in 'recipe.rb' model
+
+	class Chef < ActiveRecord::Base
+		before_save { self.email = email.downcase }
+		validates :chefname, presence: true, length: { minimum: 3, maximum: 40 }
+		VALID_EMAIL_REGEX = /\A[\w+\-.]+@[a-z\d\-.]+\.[a-z]+\z/i
+		validates :email, presence: true, length: { maximum: 105 },
+										  uniqueness: { case_sensitive: false },
+										  format: { with: VALID_EMAIL_REGEX }
+	end
+
+
+
+// generate table
+$ rails generate migration add_chef_id_to_recipes
+
+
+- Add column of 'chef_id' (foriegn key) to recipe
+
+	class AddChefIdToRecipes < ActiveRecord::Migration
+	  def change
+	  # 			add to,  add what,  type
+	  	add_column :recipes, :chef_id, :integer
+	  end
+	end
+
+
+// migrate DB
+$ rake db:migrate
+
+
+- Create relationship associations between chef and recipes
+
+	- in models/chef.rb add:
+
+		has_many :recipes
+
+
+	- in models/recipe.rb add:
+
+		belongs_to :chef
+
+
+- Testing in console:
+
+	$ rails console
+
+	// is anything in the DB table yet
+	$ Chef.all
+
+	// is anything in the DB table yet
+	$ Recipe.all
+
+	// Create a new chef 'in memory'
+	$ chef = Chef.create(chefname: "bob", email: "bob@example.com")
+
+	result:
+		(0.1ms)  begin transaction
+		  Chef Exists (0.1ms)  SELECT  1 AS one FROM "chefs"  WHERE LOWER("chefs"."email") = LOWER('bob@example.com') LIMIT 1
+		  SQL (0.5ms)  INSERT INTO "chefs" ("chefname", "created_at", "email", "updated_at") VALUES (?, ?, ?, ?)  [["chefname", "bob"], ["created_at", "2015-12-08 01:21:17.520487"], ["email", "bob@example.com"], ["updated_at", "2015-12-08 01:21:17.520487"]]
+		   (0.6ms)  commit transaction
+		=> #<Chef id: 1, chefname: "bob", email: "bob@example.com", created_at: "2015-12-08 01:21:17", updated_at: "2015-12-08 01:21:17">
+
+
+	// Create a recipe that will automatically assign the chef_id 'in memory'
+	$ recipe = chef.recipes.build(name: "vegetable saute", summary: "best vegetable dish ever", description: "add vegetables, add oil, cook for 20 minuets")
+
+	result:
+		=> #<Recipe id: nil, name: "vegetable saute", summary: "best vegetable dish ever", description: "add vegetables, add oil, cook for 20 minuets", created_at: nil, updated_at: nil, chef_id: 1>
+
+
+	// recipe will not be in the DB yet
+	$ Recipe.all
+
+	// save to DB
+	$ recipe.save
+
+	result:
+		(0.1ms)  begin transaction
+		  SQL (0.3ms)  INSERT INTO "recipes" ("chef_id", "created_at", "description", "name", "summary", "updated_at") VALUES (?, ?, ?, ?, ?, ?)  [["chef_id", 1], ["created_at", "2015-12-08 01:31:07.680897"], ["description", "add vegetables, add oil, cook for 20 minuets"], ["name", "vegetable saute"], ["summary", "best vegetable dish ever"], ["updated_at", "2015-12-08 01:31:07.680897"]]
+		   (2.1ms)  commit transaction
+		=> true
+
+
+
+- If you use .build it will only be in the memory until saved
+
+- If you do .create it will automatically insert it into the Database
+
+
+// .create a recipe
+$ recipe = chef.recipes.create(name: "potato salad", summary: "best potato salad ever", description: "add mayo, add potatoes, add onions")
+
+result:
+	(0.1ms)  begin transaction
+	  SQL (0.3ms)  INSERT INTO "recipes" ("chef_id", "created_at", "description", "name", "summary", "updated_at") VALUES (?, ?, ?, ?, ?, ?)  [["chef_id", 1], ["created_at", "2015-12-08 01:34:50.137593"], ["description", "add mayo, add potatoes, add onions"], ["name", "potato salad"], ["summary", "best potato salad ever"], ["updated_at", "2015-12-08 01:34:50.137593"]]
+	   (2.1ms)  commit transaction
+	=> #<Recipe id: 3, name: "potato salad", summary: "best potato salad ever", description: "add mayo, add potatoes, add onions", created_at: "2015-12-08 01:34:50", updated_at: "2015-12-08 01:34:50", chef_id: 1>
+
+
+// see current recipe in memory
+$ recipe
+
+// Return chef's info
+$ recipe.chef
+
+// return chef's name
+$ recipe.chef.chefname
