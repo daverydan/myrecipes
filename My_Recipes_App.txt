@@ -344,3 +344,347 @@ $ recipe.chef
 
 // return chef's name
 $ recipe.chef.chefname
+
+
+- Update Models
+
+	in test/models/recipe_test.rb:
+
+		@chef = Chef.new(chefname: "bob", email: "bob@example.com")
+		test...
+
+		then this:
+		@chef = Chef.new(chefname: "bob", email: "bob@example.com")
+
+		Change this:
+		@recipe = Recipe.new
+
+		To this:
+		@recipe = @chef.recipes.build
+
+
+// checking console errors
+> chef.errors
+> chef.errors.any? => true
+> chef.errors.full_messages
+> exit
+
+
+- Create Routes
+
+	add to routes.rb:
+
+		resources :recipes
+
+		// Show routes in terminal
+		$ rake routes
+
+
+- Create Recipes Controller (recipes_controller.rb)
+
+	class RecipesController < ApplicationController
+
+		def index
+			@recipes = Recipe.all
+		end
+
+	end
+
+
+- Create index.html.erb in /recipes:
+
+	<h1>All Recipes</h1>
+	<hr>
+
+	<% @recipes.each do |recipe| %>
+		<div class="row">
+			<div class="col-md-2">
+				<section class="chef_info center">
+					<%= gravatar_for recipe.chef, size: 80 %>
+					<h5><%= recipe.chef.chefname %></h5>
+				</section>
+			</div>
+
+			<div class="col-lg-8 well">
+				<h4><%= link_to recipe.name, "" %></h4>
+				<p><%= recipe.summary %></p>
+				<p><span class="quiet"><small><%= time_ago_in_words(recipe.created_at) %> ago</small></span></p>
+			</div>
+		</div>
+	<% end %>
+
+
+- Create gravatar_for in /helpers/application_helper.rb:
+
+	def gravatar_for(chef, options = { size: 80 })
+		gravatar_id = Digest::MD5::hexdigest(chef.email.downcase)
+		size = options[:size]
+		gravatar_url = "https://secure.gravatar.com/avatar/#{gravatar_id}?s=#{size}"
+		image_tag(gravatar_url, alt: chef.chefname, class: "gravatar")
+	end
+
+
+- Create gravatar helper in /helpers/application_helper.rb:
+
+	module ApplicationHelper
+		def gravatar_for(chef, options = { size: 80 })
+			gravatar_id = Digest::MD5::hexdigest(chef.email.downcase)
+			size = options[:size]
+			gravatar_url = "https://secure.gravatar.com/avatar/#{gravatar_id}?s=#{size}"
+			image_tag(gravatar_url, alt: chef.chefname, class: "gravatar")
+		end
+	end
+
+
+// update field in DB while in rails console
+$ chef.update_attribute(:email, "daverydan1@gmail.com")
+
+
+- Create show action in recipes_controller.rb:
+
+	def show
+		binding.pry
+	end
+
+	Note: Use 'binding.pry' to see what params come back.
+	*(View in terminal because page will stop)
+	CTRL + D (press to exit)
+
+	then add:
+
+		def show
+# recipe instance var = find by params[:id]
+			@recipe = Recipe.find(params[:id])
+		end
+
+
+- Create show.html.erb:
+
+	<h1><%= @recipe.name %></h1>
+	<div class="row">
+		<div class="col-md-4 pull-right center">
+			<%= gravatar_for @recipe.chef, size: 200 %>
+			<p>
+				<h5>By: <%= @recipe.chef.chefname %></h5>
+			</p>
+		</div>
+
+		<div class="col-md-8">
+			<%= link_to "Edit this Recipe", edit_recipe_path(@recipe), class: "btn btn-success pull-right" %>
+			<h3><%= @recipe.summary %></h3>
+			<div class="well">
+				<p><strong>Steps:</strong></p>
+				<%= simple_format(@recipe.description) %>
+			</div>
+		</div>
+	</div>
+
+	<h5><%= link_to "Return to Recipes Listing", recipes_path, class: "btn btn-warning btn-small" %></h5>
+
+Note: simple_format() : formats the text within the textarea/well
+
+
+- Add New Action and Create Action to recipes_controller.rb:
+
+	def new
+		@recipe = Recipe.new
+	end
+
+	def create
+		@recipe = Recipe.new(recipe_params)
+
+	# temporary hardcoding until we set up login/accounts
+	# because recipes needs a chef
+		@recipe.chef = Chef.find(2)
+
+		if @recipe.save
+			flash[:success] = "Recipe created successfully."
+			redirect_to recipes_path
+		else
+			render :new
+		end
+	end
+
+	private
+
+		def recipe_params
+			params.require(:recipe).permit(:name, :summary, :description)
+		end
+
+
+- Create new.html.erb to including 'error messages':
+
+	<h1>Create A New Recipe</h1>
+	<hr>
+
+	<% if @recipe.errors.any? %>
+		<div class="row">
+			<div class="alert alert-danger col-md-8 col-md-offset-2">
+				<h5>Please correct the following errors:</h5>
+				<ul>
+					<% @recipe.errors.full_messages.each do |msg| %>
+						<li><%= msg %></li>
+					<% end %>
+				</ul>
+			</div>
+		</div>
+	<% end %>
+
+	<div class="row">
+		<div class="col-md-8 well col-md-offset-2">
+			<%= form_for @recipe do |f| %>
+				<%= f.label :name %>
+				<%= f.text_field :name %>
+
+				<%= f.label :summary %>
+				<%= f.text_field :summary %>
+				
+				<%= f.label :description %>
+				<%= f.text_area :description, rows: 7 %>
+
+				<%= f.submit 'Create Recipe', class: "btn btn-success" %>
+			<% end %>
+		</div>
+	</div>
+
+
+- Place flash messages in layouts/application.html.erb:
+
+	<%= render 'layouts/messages' %>
+
+
+- Create /layouts/_messages.html.erb(partial):
+
+	<div class="row">
+		<div class="col-md-10">
+			<% flash.each do |message_type, message| %>
+				<div class="alert alert-<%= message_type %>">
+					<%= message %>
+					<a href="" class="close" data-dismiss="alert">&#215;</a>
+				</div>
+			<% end %>
+		</div>
+	</div>
+
+
+- Create Edit Actions in recipes_controller.rb(use binding.pry to see the params):
+
+	def edit
+		@recipe = Recipe.find(params[:id])
+	end
+
+	def update
+		@recipe = Recipe.find(params[:id])
+		if @recipe.update(recipe_params)
+			flash[:success] = "Recipe updated successfully."
+			redirect_to recipe_path(@recipe)
+		else
+			render :edit
+		end
+	end
+
+
+- Create edit.html.erb:
+
+	<h1>Edit Recipe</h1>
+	<hr>
+
+	<% if @recipe.errors.any? %>
+		<div class="row">
+			<div class="alert alert-danger col-md-8 col-md-offset-2">
+				<h5>Please correct the following errors:</h5>
+				<ul>
+					<% @recipe.errors.full_messages.each do |msg| %>
+						<li><%= msg %></li>
+					<% end %>
+				</ul>
+			</div>
+		</div>
+	<% end %>
+
+	<div class="row">
+		<div class="col-md-8 well col-md-offset-2">
+			<%= form_for @recipe do |f| %>
+				<%= f.label :name %>
+				<%= f.text_field :name %>
+
+				<%= f.label :summary %>
+				<%= f.text_field :summary %>
+				
+				<%= f.label :description %>
+				<%= f.text_area :description, rows: 7 %>
+
+				<%= f.submit 'Edit Recipe', class: "btn btn-success" %>
+			<% end %>
+		</div>
+	</div>
+
+
+- Add some paths to /layouts/_navigation.html.erb:
+
+	<%= link_to "My Recipes", root_path, class: "btn btn-lg btn-success", id: "logo" %>
+	<div class="nav_item">
+		<%= link_to "Recipes", recipes_path, class: "btn btn-default btn-warning" %>
+	</div>
+	<div class="nav_item">
+		<%= link_to "New Recipe", new_recipe_path, class: "btn btn-default btn-warning" %>
+	</div>
+
+
+- Add link to view all recipes in /pages/home.html.erb:
+
+	<p><%= link_to "Browse Recipe Listings", recipes_path, class: "btn btn-small btn-warning" %></p>
+
+
+- Create partials
+
+
+- Create partial _form.html.erb in /recipes:
+
+	*Cut from new.html.erb & edit.html.erb and paste:
+
+		<% if @recipe.errors.any? %>
+			<div class="row">
+				<div class="alert alert-danger col-md-8 col-md-offset-2">
+					<h5>Please correct the following errors:</h5>
+					<ul>
+						<% @recipe.errors.full_messages.each do |msg| %>
+							<li><%= msg %></li>
+						<% end %>
+					</ul>
+				</div>
+			</div>
+		<% end %>
+
+		<div class="row">
+			<div class="col-md-8 well col-md-offset-2">
+				<%= form_for @recipe do |f| %>
+					<%= f.label :name %>
+					<%= f.text_field :name %>
+
+					<%= f.label :summary %>
+					<%= f.text_field :summary %>
+					
+					<%= f.label :description %>
+					<%= f.text_area :description, rows: 7 %>
+
+					<%= f.submit 'Create Recipe', class: "btn btn-success" %>
+				<% end %>
+			</div>
+		</div>
+
+
+- Add to new.html.erb & edit.html.erb in place of form code:
+
+	<%= render 'form' %> (renders partial /recipes/_form.html.erb)
+
+
+- Change submit button text in /recipes/_form.html.erb:
+
+	From:
+
+		<%= f.submit 'Create Recipe', class: "btn btn-success" %>
+
+	To:
+
+		<%= f.submit(@recipe.new_record? ? 'Create Recipe' : 'Edit Recipe', class: "btn btn-success") %>

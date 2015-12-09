@@ -64,3 +64,28 @@ footer {
 	color: #777;
 	padding-top: 15px;
 }
+
+input, textarea, select, .uneditable-input {
+	border: 1px solid #d2d2d2;
+	border-radius: 5px;
+	width: 100%;
+	margin-bottom: 15px;
+}
+
+input {
+	height: 40px;
+	padding: 0 10px;
+}
+
+input, textarea {
+	padding: 10px;
+
+}
+
+.alert {
+	margin-top: 10px;
+}
+
+.close {
+	line-height: 12px;
+}
