@@ -688,3 +688,216 @@ Note: simple_format() : formats the text within the textarea/well
 	To:
 
 		<%= f.submit(@recipe.new_record? ? 'Create Recipe' : 'Edit Recipe', class: "btn btn-success") %>
+
+
+
+
+/* ==================================================
+	Skipped notes for Lecture 34 and 35 Maybe
+================================================== */
+
+
+
+/* ==================================================
+	
+	#36 
+	
+	Implement image ipload feature part 1: 
+	installation, git branch feature, update
+
+================================================== */
+
+- Add the following to Gemfile for image upload:
+
+	gem 'carrierwave', '0.10.0'
+	gem 'mini_magick', '3.8.0'
+
+
+$ bundle install
+
+
+$ rails generate uploader Picture
+	// result: generated /uploaders/picture_uploader.rb
+
+
+// add column to table in DB
+$ rails generate migration add_picture_to_recipes picture:string
+
+	// result: created the following file '####_add_picture_to_recipes.rb' under /db/migrate:
+
+	class AddPictureToRecipes < ActiveRecord::Migration
+	  def change
+	    add_column :recipes, :picture, :string
+	  end
+	end
+
+
+// run migration
+$ rake db:migrate
+
+
+- In Recipe Model 'recipe.rb' add:
+
+	mount_uploader :picture, PictureUploader
+
+
+- In '_form.html.erb' change this:
+
+		<%= form_for @recipe do |f| %>
+
+	to this:
+
+		<%= form_for(@recipe, html: { multipart: true }) do |f| %>
+
+	+ add:
+
+		<span class="picture">
+			<%= f.file_field :picture, accept: 'image/jpeg,image/gif,image/png' %>
+		</span>
+
+
+- Whitelist file field from '_form.html.erb' in Recipes Controller 'recipe.rb':
+
+	from this:
+
+		params.require(:recipe).permit(:name, :summary, :description)
+
+	to this: 
+
+		params.require(:recipe).permit(:name, :summary, :description, :picture)
+
+
+- Add image tag to 'index.html.erb':
+
+	+ add to /recipes/index.html.erb:
+
+		<div class="col-md-4">
+			<%= imgage_tag(recipe.picture.url, size: "250x150", class: "recipe-image") if recipe.picture? %>
+		</div>
+
+
+/* ==================================================
+	
+	#37
+	
+	Implement image ipload feature part 2:
+	image handling, display, forms update
+
+================================================== */
+
+- Add image tag to 'show.html.erb':
+
+	+ add to /recipes/show.html.erb:
+
+		<div class="show_recipe">
+			<%= image_tag(@recipe.picture.url, class: "recipe-image") if @recipe.picture? %>
+		</div>
+
+
+- Add a whitelist of extensions to /uploaders/picture_uploader.rb:
+
+	Uncomment these 3 lines:
+
+		def extension_white_list
+		  %w(jpg jpeg gif png)
+		end
+
+
+- Add validations in /models/recipe.rb to prevent server side upload:
+
+	validate :picture_size
+
+	private
+	def picture_size
+		if picture.size > 5.megabytes
+			errors.add(:picture, "should be less than 5MB")
+		end
+	end
+
+
+/* ==================================================
+	
+	#38
+	
+	Implement image ipload feature part 3: 
+	JavaScript validation, resizing/storage
+
+================================================== */
+
+- Add image resize capability with image_magick
+
+- Add jQuery validations in /recipes/_form.html.erb to prevent client side upload of 
+  images greater then 5MB:
+
+  	<script>
+  		$('#recipe_picture').bind('change', function() {
+  			size_in_megabytes = this.files[0].size/1024/1024;
+  			if (size_in_megabytes > 5) {
+  				alert('Max file size upload: (5MB)');
+  			}
+  		});
+  	</script>
+
+
+// didn't do anything (command not found)
+$ sudo apt-get update
+
+// didn't do anything (command not found)
+$ sudo apt-get install imagemagick --fix-missing
+
+
+$ brew install imagemagick
+// result: Warning: imagemagick-6.9.1-10 already installed
+
+
+- Uncomment in /uploaders/picture_uploader.rb:
+
+	include CarrierWave::MiniMagick
+
+	+ add:
+
+		process resize_to_limit: [600, 600]
+
+
+- Add styles to custom.css.scss:
+
+	span.picture {
+		margin-top: 10px;
+		input {
+			border: 0;
+		}
+	}
+
+	.show_recipe {
+		margin: 10px;
+	}
+
+
+- Rails Console
+
+	$ rails console
+
+	$ Chef.all (good)
+
+	$ Recipe.all (error)
+
+
+- To fix the error of '$ Recipe.all' go to /config/environmet.rb and add this to the 
+  very bottom:
+
+  	require 'carrierwave/orm/activerecord'
+
+- Next go to terminal again:
+
+	$ exit
+
+	$ rails s
+
+	$ Recipe.all (error is gone)
+
+
+- Check it out
+
+	$ rails s
+
+-----> video stopped at 13:40
